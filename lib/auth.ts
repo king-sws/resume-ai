@@ -5,35 +5,29 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
 import bcrypt from "bcryptjs"
-import { UserPlan, UserRole } from "./generated/prisma/enums"
 import prisma from "./db"
 
-// Extend NextAuth types
 declare module "next-auth" {
+  interface User {
+    role?: string
+    plan?: string
+    isEmailVerified?: boolean
+  }
   interface Session {
     user: {
-      id: string
-      role: UserRole
-      plan: UserPlan
-      isEmailVerified: boolean
+      id?: string
+      role?: string
+      plan?: string
+      isEmailVerified?: boolean
     } & DefaultSession["user"]
   }
-
-  interface User {
-    role: UserRole
-    plan: UserPlan
-    isEmailVerified: boolean
-  }
-}
-
-declare module "next-auth/jwt" {
   interface JWT {
-    id: string
-    role: UserRole
-    plan: UserPlan
-    isEmailVerified: boolean
+    role?: string
+    plan?: string
+    isEmailVerified?: boolean
   }
 }
+
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
@@ -141,8 +135,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               await prisma.usageStats.create({
                 data: {
                   userId: existingUser.id,
-                  resumesLimit: existingUser.plan === UserPlan.FREE ? 1 : -1,
-                  aiCreditsLimit: existingUser.plan === UserPlan.FREE ? 10 : 100,
+                  resumesLimit: existingUser.plan === "FREE" ? 1 : -1,
+                  aiCreditsLimit: existingUser.plan === "FREE" ? 10 : 100,
                 }
               })
             }
@@ -205,8 +199,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as UserRole
-        session.user.plan = token.plan as UserPlan
+        session.user.role = token.role as string | undefined
+        session.user.plan = token.plan as string | undefined
         session.user.isEmailVerified = token.isEmailVerified as boolean
         session.user.name = token.name as string
         session.user.email = token.email as string
