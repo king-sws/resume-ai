@@ -1,74 +1,79 @@
-// lib/auth.ts
-import NextAuth, { DefaultSession } from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import CredentialsProvider from "next-auth/providers/credentials"
-import GoogleProvider from "next-auth/providers/google"
-import GitHubProvider from "next-auth/providers/github"
+// auth.ts
+import NextAuth from "next-auth"
+import Google from "next-auth/providers/google"
+import GitHub from "next-auth/providers/github"
+import Credentials from "next-auth/providers/credentials"
+import prisma from "@/lib/db"
 import bcrypt from "bcryptjs"
-import prisma from "./db"
+import { z } from "zod"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { UserRole } from "./generated/prisma/enums"
 
-declare module "next-auth" {
-  interface User {
-    role?: string
-    plan?: string
-    isEmailVerified?: boolean
-  }
-  interface Session {
-    user: {
-      id?: string
-      role?: string
-      plan?: string
-      isEmailVerified?: boolean
-    } & DefaultSession["user"]
-  }
-  interface JWT {
-    role?: string
-    plan?: string
-    isEmailVerified?: boolean
-  }
-}
+// Validation schema for credentials
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+})
 
-
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  
+  // Session strategy
   session: {
-    strategy: "jwt", // Must use JWT for credentials provider
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  pages: {
-    signIn: "/auth/sign-in",
-    signOut: "/auth/logout",
-    error: "/auth/error",
-    verifyRequest: "/auth/verify",
-    newUser: "/dashboard",
+
+  // JWT configuration
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+
   providers: [
-    // Credentials Provider (Email & Password)
-    CredentialsProvider({
-      id: "credentials",
+    // Google OAuth
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
+
+    // GitHub OAuth
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
+
+    // Email/Password credentials
+    Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
-
+      authorize: async (credentials) => {
         try {
+          // Validate input
+          const { email, password } = loginSchema.parse(credentials)
+
+          // Find user in database
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string }
+            where: { email },
           })
 
           if (!user || !user.password) {
             return null
           }
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password as string,
-            user.password
-          )
-
+          // Verify password
+          const isPasswordValid = await bcrypt.compare(password, user.password)
           if (!isPasswordValid) {
             return null
           }
@@ -77,172 +82,309 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await prisma.user.update({
             where: { id: user.id },
             data: { lastLoginAt: new Date() }
+          }).catch(() => {
+            // Silently fail if update doesn't work
           })
 
-          // Return user object that matches User interface
+          // Return user object
           return {
             id: user.id,
-            email: user.email!,
+            email: user.email,
             name: user.name,
             image: user.image,
             role: user.role,
-            plan: user.plan,
-            isEmailVerified: user.isEmailVerified,
           }
         } catch (error) {
           console.error("Auth error:", error)
           return null
         }
-      }
-    }),
-
-    // Google Provider
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-    }),
-
-    // GitHub Provider
-    GitHubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-      allowDangerousEmailAccountLinking: true,
+      },
     }),
   ],
+
+  // Custom pages
+  pages: {
+    signIn: "/auth/sign-in",
+    error: "/auth/error",
+    verifyRequest: "/auth/verify-request",
+  },
+
+  // Callbacks for customization
   callbacks: {
-    async signIn({ user, account }) {
-      // For OAuth providers, ensure user has usage stats
-      if (account?.provider !== "credentials") {
-        try {
-          const existingUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            include: { usageStats: true }
+    // JWT callback - handles token creation and updates
+    jwt: async ({ token, user, account, trigger }) => {
+      // Initial sign in - get data from user object
+      if (user) {
+        token.id = user.id
+        token.role = user.role
+        token.name = user.name
+        token.email = user.email
+        token.picture = user.image
+      }
+
+      // For OAuth providers, fetch role from database on first sign-in
+      if (account?.provider && account.provider !== "credentials" && user?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { 
+            id: true, 
+            role: true, 
+            plan: true,
+            email: true, 
+            name: true, 
+            image: true,
+          },
+        })
+
+        if (dbUser) {
+          token.id = dbUser.id
+          token.role = dbUser.role
+          token.plan = dbUser.plan
+          token.name = dbUser.name
+          token.picture = dbUser.image
+
+          // Update last login for OAuth
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { lastLoginAt: new Date() }
+          }).catch(() => {
+            // Silently fail if update doesn't work
           })
-
-          if (existingUser) {
-            // Update last login and verify email
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { 
-                lastLoginAt: new Date(),
-                isEmailVerified: true,
-              }
-            })
-
-            // Create usage stats if missing
-            if (!existingUser.usageStats) {
-              await prisma.usageStats.create({
-                data: {
-                  userId: existingUser.id,
-                  resumesLimit: existingUser.plan === "FREE" ? 1 : -1,
-                  aiCreditsLimit: existingUser.plan === "FREE" ? 10 : 100,
-                }
-              })
-            }
-          }
-        } catch (error) {
-          console.error("SignIn callback error:", error)
         }
       }
 
-      return true
-    },
+      // Refresh token data periodically or on update
+      if (trigger === "update" && token.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email as string },
+          select: { 
+            id: true, 
+            role: true,
+            plan: true,
+            email: true, 
+            name: true, 
+            image: true,
+          },
+        })
 
-    async jwt({ token, user, trigger, session }) {
-      // Initial sign in
-      if (user && user.id) {
-        token.id = user.id
-        token.role = user.role
-        token.plan = user.plan
-        token.isEmailVerified = user.isEmailVerified
-      }
-
-      // Handle session updates
-      if (trigger === "update" && session) {
-        token.name = session.user?.name
-        token.email = session.user?.email
-        token.picture = session.user?.image
-      }
-
-      // Refresh user data from database
-      if (token.id) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: {
-              role: true,
-              plan: true,
-              isEmailVerified: true,
-              name: true,
-              email: true,
-              image: true,
-            }
-          })
-
-          if (dbUser) {
-            token.role = dbUser.role
-            token.plan = dbUser.plan
-            token.isEmailVerified = dbUser.isEmailVerified
-            token.name = dbUser.name
-            token.email = dbUser.email
-            token.picture = dbUser.image
-          }
-        } catch (error) {
-          console.error("JWT callback error:", error)
+        if (dbUser) {
+          token.id = dbUser.id
+          token.role = dbUser.role
+          token.plan = dbUser.plan
+          token.name = dbUser.name
+          token.picture = dbUser.image
         }
       }
 
       return token
     },
 
-    async session({ session, token }) {
+    // Session callback - exposes user data to the client
+    session: async ({ session, token }) => {
       if (token && session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as string | undefined
-        session.user.plan = token.plan as string | undefined
-        session.user.isEmailVerified = token.isEmailVerified as boolean
-        session.user.name = token.name as string
-        session.user.email = token.email as string
-        session.user.image = token.picture as string | undefined
+        session.user.role = token.role as UserRole
+        session.user.plan = token.plan as string
+        session.user.email = token.email!
+        session.user.name = token.name as string | null
+        session.user.image = token.picture as string | null
       }
 
       return session
     },
-  },
-  events: {
-    async createUser({ user }) {
+
+    // Sign in callback - handles user creation and validation
+    signIn: async ({ user, account, profile }) => {
       try {
-        // Check if usage stats already exist
-        if (!user.id) return
+        // For OAuth providers
+        if (account?.provider !== "credentials") {
+          if (user?.email) {
+            const existingUser = await prisma.user.findUnique({
+              where: { email: user.email },
+            })
 
-        const existingStats = await prisma.usageStats.findUnique({
-          where: { userId: user.id }
-        })
+            // If user doesn't exist, create them with usage stats
+            if (!existingUser) {
+              const normalizedImage =
+                typeof user.image === "string"
+                  ? user.image
+                  : typeof profile?.image === "string"
+                  ? profile.image
+                  : null
 
-        if (!existingStats) {
-          await prisma.usageStats.create({
-            data: {
-              userId: user.id,
-              resumesLimit: 1,
-              aiCreditsLimit: 10,
+              const normalizedName =
+                typeof user.name === "string"
+                  ? user.name
+                  : typeof profile?.name === "string"
+                  ? profile.name
+                  : null
+
+              // Create user with usage stats in transaction
+              await prisma.$transaction(async (tx) => {
+                const newUser = await tx.user.create({
+                  data: {
+                    email: user.email!,
+                    name: normalizedName || null,
+                    image: normalizedImage || null,
+                    role: "USER",
+                    plan: "FREE",
+                    emailVerified: new Date(),
+                    isEmailVerified: true,
+                    lastLoginAt: new Date(),
+                  }
+                })
+
+                // Create usage stats for new user
+                await tx.usageStats.create({
+                  data: {
+                    userId: newUser.id,
+                    resumesCreated: 0,
+                    resumesLimit: 1,
+                    aiCreditsUsed: 0,
+                    aiCreditsLimit: 10,
+                  }
+                })
+              })
+            } else {
+              // Update last login for existing user
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { lastLoginAt: new Date() }
+              }).catch(() => {
+                // Silently fail if update doesn't work
+              })
             }
-          })
+          }
+          return true
         }
+
+        // For credentials, user must exist (handled in authorize)
+        return !!user
       } catch (error) {
-        console.error("CreateUser event error:", error)
+        console.error("Sign-in callback error:", error)
+        // Allow sign-in even if database operations fail
+        return true
       }
     },
-    async linkAccount({ user }) {
-      try {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { isEmailVerified: true }
-        })
-      } catch (error) {
-        console.error("LinkAccount event error:", error)
+
+    // Redirect callback - handles post-login navigation
+    redirect: async ({ url, baseUrl }) => {
+      // Handle relative callback URLs
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`
       }
-    }
+      
+      // Handle same-origin URLs
+      try {
+        const urlObj = new URL(url)
+        if (urlObj.origin === baseUrl) {
+          return url
+        }
+      } catch {
+        // Invalid URL, use default
+      }
+      
+      // Default redirect to dashboard for logged-in users
+      return `${baseUrl}/dashboard`
+    },
   },
+
+  // Events for logging and analytics
+  events: {
+    signIn: async ({ user, account, isNewUser }) => {
+      console.log(`✅ User ${user.email} signed in with ${account?.provider}`)
+      
+      if (isNewUser) {
+        console.log(`🎉 New user registered: ${user.email}`)
+        
+        // Log analytics event for new user
+        await prisma.analytics.create({
+          data: {
+            eventType: "user_registered",
+            userId: user.id,
+            metadata: {
+              provider: account?.provider,
+              email: user.email,
+            }
+          }
+        }).catch(() => {
+          // Silently fail if analytics doesn't work
+        })
+      } else {
+        // Log analytics event for returning user
+        await prisma.analytics.create({
+          data: {
+            eventType: "user_login",
+            userId: user.id,
+            metadata: {
+              provider: account?.provider,
+            }
+          }
+        }).catch(() => {
+          // Silently fail if analytics doesn't work
+        })
+      }
+    },
+
+    createUser: async ({ user }) => {
+      console.log(`👤 New user created: ${user.email}`)
+    },
+
+    signOut: async (message) => {
+      let token = undefined
+      if (message && "token" in message) {
+        token = (message as { token?: { email?: string; id?: string } | null }).token
+      }
+      
+      if (token?.id) {
+        // Log analytics event for sign out
+        await prisma.analytics.create({
+          data: {
+            eventType: "user_logout",
+            userId: token.id,
+          }
+        }).catch(() => {
+          // Silently fail if analytics doesn't work
+        })
+      }
+      
+      console.log(`👋 User signed out: ${token?.email}`)
+    },
+  },
+
+  // Security options
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production" 
+        ? "__Secure-next-auth.session-token" 
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
+
+  // Debug in development
   debug: process.env.NODE_ENV === "development",
+
+  // Custom error handling
+  logger: {
+    error: (error) => {
+      console.error(`❌ Auth error:`, error)
+    },
+    warn: (code) => {
+      console.warn(`⚠️ Auth warning [${code}]`)
+    },
+    debug: (code, metadata) => {
+      if (process.env.NODE_ENV === "development") {
+        console.debug(`🔍 Auth debug [${code}]:`, metadata)
+      }
+    },
+  },
+
+  // Ensure errors don't crash the app
+  trustHost: true,
 })

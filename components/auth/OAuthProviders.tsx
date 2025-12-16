@@ -26,7 +26,7 @@ export function OAuthProviders() {
         variant="outline"
         onClick={() => handleOAuthSignIn('google')}
         disabled={loadingProvider !== null}
-        className="w-full h-11 border-slate-200 hover:bg-slate-50"
+        className="w-full h-11 bg-white/5 border-white/10 hover:bg-white/10 text-white transition-colors"
       >
         {loadingProvider === 'google' ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -57,7 +57,7 @@ export function OAuthProviders() {
         variant="outline"
         onClick={() => handleOAuthSignIn('github')}
         disabled={loadingProvider !== null}
-        className="w-full h-11 border-slate-200 hover:bg-slate-50"
+        className="w-full h-11 bg-white/5 border-white/10 hover:bg-white/10 text-white transition-colors"
       >
         {loadingProvider === 'github' ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />

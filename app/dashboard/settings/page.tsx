@@ -28,10 +28,10 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-3xl font-bold text-white/90">Settings</h1>
         <p className="mt-2 text-slate-600">
           Manage your account settings and preferences
         </p>

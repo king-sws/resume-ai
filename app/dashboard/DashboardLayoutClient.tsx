@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { cn } from '@/lib/utils'
 
 interface UsageStats {
   aiCreditsUsed: number
@@ -34,6 +35,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayoutClient({ children, user }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#191a1a]">
@@ -42,13 +44,18 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
         user={user} 
         isMobileOpen={isMobileMenuOpen}
         onMobileOpenChange={setIsMobileMenuOpen}
+        onCollapsedChange={setIsSidebarCollapsed}
       />
 
-      {/* Main Content Area - Push right on desktop */}
-      <div className="lg:pl-64">
+      {/* Main Content Area - Dynamic padding based on sidebar state */}
+      <div className={cn(
+        "transition-all duration-300",
+        isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+      )}>
         {/* Header */}
         <DashboardHeader 
           user={user}
+          onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 
         {/* Page Content */}

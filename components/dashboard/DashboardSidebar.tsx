@@ -18,6 +18,7 @@ import {
   Layers,
   Zap,
   ChevronRight,
+  ChevronLeft,
   type LucideIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,8 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { useTheme } from 'next-themes'
+import Image from 'next/image'
+import { signOut } from 'next-auth/react'
 
 interface UsageStats {
   aiCreditsUsed: number
@@ -62,6 +65,7 @@ interface DashboardSidebarProps {
   user: User | null
   isMobileOpen?: boolean
   onMobileOpenChange?: (open: boolean) => void
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
 interface NavigationItem {
@@ -85,7 +89,8 @@ function SidebarContent({
   getPlanColors,
   handleLogout,
   router,
-  isDark
+  isDark,
+  isCollapsed = false
 }: {
   user: User | null
   navigation: NavigationItem[]
@@ -96,229 +101,220 @@ function SidebarContent({
   handleLogout: () => Promise<void>
   router: ReturnType<typeof useRouter>
   isDark: boolean
+  isCollapsed?: boolean
 }) {
   return (
     <div className="flex flex-col h-full bg-[#191a1aee] text-gray-100">
       {/* Header/Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-gray-700">
-        <Link href="/" className="inline-block">
-          <div className="flex items-center space-x-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-white" />
+      <div className={cn(
+        "h-16 flex items-center border-b border-gray-700 transition-all duration-300",
+        isCollapsed ? "px-2 justify-center" : "px-4"
+      )}>
+        <Link href="/dashboard" className="inline-block">
+          {isCollapsed ? (
+            <Image src="/mlogo.png" alt="Logo" width={35} height={35} />
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="flex flex-col">
+                <Image src="/logo-w.png" alt="Logo" width={100} height={90} />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-white">ResumeAI</span>
-              <span className="text-xs text-gray-400">Resume Builder</span>
-            </div>
-          </div>
+          )}
         </Link>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto py-3 px-3 space-y-6 custom-scrollbar">
-        {/* User Profile Card */}
-        <div className="px-3 py-3 bg-gray-800/50 rounded-lg border border-gray-700">
-          <div className="flex items-center gap-3 mb-3">
-            <Avatar className="h-9 w-9 border border-gray-600">
-              <AvatarImage src={user?.image || undefined} alt={user?.name || 'User'} />
-              <AvatarFallback className="bg-primary text-white">
-                {user?.name?.[0]?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm font-medium truncate text-white">
-                {user?.name || 'User'}
-              </span>
-              {/* <div className="flex items-center gap-1.5">
-                <Badge variant="outline" className={cn("text-xs px-1.5 py-0 h-4 border", getPlanColors())}>
-                  {user?.plan || 'FREE'}
-                </Badge>
-                {(user?.plan === 'PRO' || user?.plan === 'ENTERPRISE') && (
-                  <Crown className="h-3 w-3 text-yellow-400" />
-                )}
-              </div> */}
-            </div>
-          </div>
-
-          {/* AI Credits */}
-          {/* <div className="space-y-1.5 mb-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400">AI Credits</span>
-              <span className="font-medium text-gray-200">
-                {user?.usageStats?.aiCreditsUsed || 0}/{user?.usageStats?.aiCreditsLimit || 10}
-              </span>
-            </div>
-            <Progress 
-              value={creditsPercentage} 
-              className="h-1.5 bg-gray-700"
-            />
-          </div> */}
-
-          {/* Resume Limit (for FREE users) */}
-          {/* {user?.plan === 'FREE' && user?.usageStats && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-400">Resumes</span>
-                <span className="font-medium text-gray-200">
-                  {user.usageStats.resumesCreated}/{user.usageStats.resumesLimit}
-                </span>
-              </div>
-              <Progress 
-                value={resumePercentage} 
-                className="h-1.5 bg-gray-700"
-              />
-            </div>
-          )} */}
-
-          {/* Subscription Status */}
-          {user?.subscription?.status === 'active' && user?.subscription?.currentPeriodEnd && (
-            <div className="mt-3 pt-3 border-t border-gray-700">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-400">Renews</span>
-                <span className="font-medium text-gray-200">
-                  {format(new Date(user.subscription.currentPeriodEnd), 'MMM d, yyyy')}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="space-y-1">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            const active = isActive(item.href)
-            return (
-              <Link
-  key={item.name}
-  href={item.href}
-  className={cn(
-    "flex items-center gap-3 py-2 px-3 rounded-md transition-all group relative",
-    active
-      ? "bg-cyan-400/10 text-white border-l-2 border-cyan-400"
-      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-  )}
->
+  {/* User Profile */}
   <div
     className={cn(
-      "w-6 h-6 rounded-md flex items-center justify-center transition-all",
-      active ? "bg-cyan-400/20" : "bg-transparent group-hover:bg-gray-700"
+      "px-3 py-2 rounded-xl border-none lg:border border-gray-700/50 lg:bg-gray-800/60 shadow-md backdrop-blur-sm transition-all",
+      isCollapsed && "px-2"
     )}
   >
-    <Icon
+    <div
       className={cn(
-        "h-4 w-4 transition-transform group-hover:scale-110",
-        active ? "text-cyan-400" : item.darkColor
+        "flex items-center gap-3",
+        isCollapsed && "flex-col gap-2"
       )}
-    />
+    >
+      <Avatar
+        className={cn(
+          "border-2 border-primary/40 shadow-md transition-all",
+          isCollapsed ? "h-12 w-12" : "h-11 w-11"
+        )}
+      >
+        <AvatarImage src={user?.image || undefined} alt={user?.name || "User"} />
+        <AvatarFallback className="bg-primary text-white font-semibold">
+          {user?.name?.[0]?.toUpperCase() || "U"}
+        </AvatarFallback>
+      </Avatar>
+
+      {!isCollapsed && (
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-semibold truncate text-white">
+            {user?.name || "User"}
+          </span>
+          <span className="text-xs text-gray-400 truncate">
+            {user?.email}
+          </span>
+        </div>
+      )}
+    </div>
+
+    {/* Subscription Details */}
+    {!isCollapsed &&
+      user?.subscription?.status === "active" &&
+      user?.subscription?.currentPeriodEnd && (
+        <div className="mt-3 pt-3 border-t border-gray-700/50">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400 flex items-center gap-1">
+              <Crown className="h-3 w-3 text-yellow-400" />
+              Renews
+            </span>
+            <span className="font-medium text-gray-200">
+              {format(
+                new Date(user.subscription.currentPeriodEnd),
+                "MMM d, yyyy"
+              )}
+            </span>
+          </div>
+        </div>
+      )}
   </div>
 
-  <span className="text-sm flex-1">{item.name}</span>
+  {/* Navigation */}
+  <nav className="space-y-1">
+    {navigation.map((item) => {
+      const Icon = item.icon
+      const active = isActive(item.href)
 
-  {item.badge && (
-    <Badge
-      variant="secondary"
-      className="text-xs px-1.5 py-0 h-4 bg-gray-700 text-gray-200 border-gray-600"
-    >
-      {item.badge}
-    </Badge>
-  )}
-</Link>
-
-            )
-          })}
-        </nav>
-
-        {/* Upgrade Card */}
-        {/* {user?.plan === 'FREE' && (
-          <div className="mx-1 rounded-lg border border-primary/30 bg-gradient-to-br from-yellow-600 to-[#1d6b40] p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="h-4 w-4 text-yellow-400" />
-              <span className="text-sm font-medium text-white">Upgrade to Pro</span>
-            </div>
-            <p className="text-xs text-gray-300 mb-3">
-              Unlimited resumes, AI credits & premium templates
-            </p>
-            <Button asChild size="sm" className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-white">
-              <Link href="/dashboard/upgrade">
-                <Crown className="h-3 w-3 mr-1" />
-                Upgrade Now
-              </Link>
-            </Button>
+      return (
+        <Link
+          key={item.name}
+          href={item.href}
+          title={isCollapsed ? item.name : undefined}
+          className={cn(
+            "flex items-center gap-3 py-2.5 rounded-lg transition-all group",
+            isCollapsed ? "px-2 justify-center" : "px-3",
+            active
+              ? "bg-cyan-400/10 text-white border-l-2 border-cyan-400"
+              : "text-gray-300 hover:bg-gray-800 hover:text-white"
+          )}
+        >
+          <div
+            className={cn(
+              "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+              active ? "bg-cyan-400/20" : "bg-transparent group-hover:bg-gray-700"
+            )}
+          >
+            <Icon
+              className={cn(
+                "h-4 w-4 transition-transform group-hover:scale-110",
+                active ? "text-cyan-400" : item.darkColor
+              )}
+            />
           </div>
-        )} */}
-      </div>
+
+          {!isCollapsed && (
+            <>
+              <span className="text-sm font-medium flex-1">{item.name}</span>
+              {item.badge && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs px-1.5 h-4 bg-gray-700 text-gray-200 border-gray-600"
+                >
+                  {item.badge}
+                </Badge>
+              )}
+            </>
+          )}
+        </Link>
+      )
+    })}
+  </nav>
+</div>
+
 
       {/* User Profile Footer */}
-      <div className="p-3 border-t border-gray-700 bg-gray-800/50">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800 transition-colors text-left">
-              <Avatar className="h-9 w-9 border border-gray-600">
-                <AvatarImage src={user?.image || undefined} alt={user?.name || 'User'} />
-                <AvatarFallback className="bg-primary text-white">
-                  {user?.name?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="overflow-hidden flex-1">
-                <p className="text-sm font-medium truncate text-white">{user?.name || 'User'}</p>
-                <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+      {!isCollapsed && (
+        <div className="p-3 border-t border-gray-700 bg-gray-800/50">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800 transition-colors text-left">
+                <Avatar className="h-9 w-9 border border-gray-600">
+                  <AvatarImage src={user?.image || undefined} alt={user?.name || 'User'} />
+                  <AvatarFallback className="bg-primary text-white">
+                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="overflow-hidden flex-1">
+                  <p className="text-sm font-medium truncate text-white">{user?.name || 'User'}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="end" 
+              className="w-56 bg-gray-800 border-gray-700"
+            >
+              <div className="p-2 text-xs text-gray-400">
+                {user?.email}
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            className="w-56 bg-gray-800 border-gray-700"
-          >
-            <div className="p-2 text-xs text-gray-400">
-              {user?.email}
-            </div>
-            <DropdownMenuSeparator className="bg-gray-700" />
-            <DropdownMenuItem 
-              className="cursor-pointer text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
-              onClick={() => router.push('/dashboard/profile')}
-            >
-              <User className="h-4 w-4 mr-2 text-gray-400" /> Profile 
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="cursor-pointer text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
-              onClick={() => router.push('/dashboard/settings')}
-            >
-              <Settings className="h-4 w-4 mr-2 text-gray-400" /> Settings
-            </DropdownMenuItem>
-            {user?.plan !== 'FREE' && (
+              <DropdownMenuSeparator className="bg-gray-700" />
               <DropdownMenuItem 
                 className="cursor-pointer text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
-                onClick={() => router.push('/dashboard/billing')}
+                onClick={() => router.push('/dashboard/profile')}
               >
-                <Crown className="h-4 w-4 mr-2 text-yellow-400" /> Billing
+                <User className="h-4 w-4 mr-2 text-gray-400" /> Profile 
               </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator className="bg-gray-700" />
-            <DropdownMenuItem 
-              className="cursor-pointer text-red-400 hover:bg-gray-700 hover:text-red-300 focus:bg-gray-700"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4 mr-2" /> Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              <DropdownMenuItem 
+                className="cursor-pointer text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
+                onClick={() => router.push('/dashboard/settings')}
+              >
+                <Settings className="h-4 w-4 mr-2 text-gray-400" /> Settings
+              </DropdownMenuItem>
+              {user?.plan !== 'FREE' && (
+                <DropdownMenuItem 
+                  className="cursor-pointer text-gray-200 hover:bg-gray-700 focus:bg-gray-700"
+                  onClick={() => router.push('/dashboard/billing')}
+                >
+                  <Crown className="h-4 w-4 mr-2 text-yellow-400" /> Billing
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator className="bg-gray-700" />
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-400 hover:bg-gray-700 hover:text-red-300 focus:bg-gray-700"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" /> Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   )
 }
 
-export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMobileOpenChange }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMobileOpenChange, onCollapsedChange }: DashboardSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [internalMobileOpen, setInternalMobileOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
   // Use external state if provided, otherwise use internal state
   const isMobileOpen = externalMobileOpen !== undefined ? externalMobileOpen : internalMobileOpen
   const setIsMobileOpen = onMobileOpenChange || setInternalMobileOpen
+
+  // Notify parent when collapsed state changes
+  useEffect(() => {
+    onCollapsedChange?.(isCollapsed)
+  }, [isCollapsed, onCollapsedChange])
 
   const navigation: NavigationItem[] = useMemo(() => [
     {
@@ -397,28 +393,28 @@ export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMob
       : 0
   }, [user?.usageStats])
 
-  const handleLogout = useCallback(async () => {
-    try {
-      await fetch('/api/auth/signout', { method: 'POST' })
-      window.location.href = '/auth/sign-in'
-    } catch (error) {
-      console.error('Logout failed:', error)
-    }
-  }, [])
+const handleLogout = useCallback(async () => {
+  try {
+    // Use NextAuth's signOut which properly clears the session
+    await signOut({ 
+      callbackUrl: '/auth/sign-in',
+      redirect: true // This ensures proper redirect after logout
+    })
+  } catch (error) {
+    console.error('Logout failed:', error)
+    // Fallback: force redirect
+    window.location.href = '/auth/sign-in'
+  }
+}, [])
 
-  // Close mobile menu when pathname changes (proper way)
+  // Close mobile menu when pathname changes
   useEffect(() => {
-    const handleRouteChange = () => {
+    if (isMobileOpen) {
       setIsMobileOpen(false)
     }
-    
-    // Only set if it's different from current state
-    if (isMobileOpen) {
-      handleRouteChange()
-    }
-  }, [pathname, isMobileOpen])
+  }, [pathname])
 
-  // Get plan colors - Updated for dark theme
+  // Get plan colors
   const getPlanColors = useCallback(() => {
     switch (user?.plan) {
       case 'FREE':
@@ -435,7 +431,14 @@ export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMob
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="fixed left-0 top-0 hidden lg:block h-full w-64 border-r border-gray-700 bg-[#191a1aee] z-40">
+      <aside 
+        className={cn(
+          "fixed left-0 top-0 hidden lg:block h-full border-r border-gray-700 bg-[#191a1aee] z-40 transition-all duration-300",
+          isCollapsed ? "w-20" : "w-64"
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <SidebarContent 
           user={user}
           navigation={navigation}
@@ -446,18 +449,31 @@ export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMob
           handleLogout={handleLogout}
           router={router}
           isDark={isDark}
+          isCollapsed={isCollapsed}
         />
+        
+        {/* Toggle Button - Only visible on hover */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            "absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all duration-300 shadow-lg",
+            isHovered ? "opacity-100" : "opacity-0"
+          )}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </button>
       </aside>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar - Visible on mobile and tablet (< lg) */}
       <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
         <SheetContent 
           side="left" 
           className="w-72 p-0 bg-[#191a1aee] border-r border-gray-700"
         >
-          <div className="flex justify-end p-2 lg:hidden">
-            <SheetClose asChild />
-          </div>
           <SidebarContent 
             user={user}
             navigation={navigation}
@@ -468,12 +484,16 @@ export function DashboardSidebar({ user, isMobileOpen: externalMobileOpen, onMob
             handleLogout={handleLogout}
             router={router}
             isDark={isDark}
+            isCollapsed={false}
           />
         </SheetContent>
       </Sheet>
 
       {/* Offset for Desktop */}
-      <div className="hidden lg:block w-64" />
+      <div className={cn(
+        "hidden lg:block transition-all duration-300",
+        isCollapsed ? "w-20" : "w-64"
+      )} />
     </>
   )
 }

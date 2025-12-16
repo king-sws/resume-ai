@@ -98,6 +98,26 @@ export const SignInWithCredentials = async (
       };
     }
 
+    // Log analytics event
+    const user = await prisma.user.findUnique({
+      where: { email: validated.email },
+      select: { id: true }
+    });
+
+    if (user) {
+      await prisma.analytics.create({
+        data: {
+          eventType: "user_login",
+          userId: user.id,
+          metadata: {
+            provider: "credentials",
+          }
+        }
+      }).catch(() => {
+        // Silently fail if analytics doesn't work
+      });
+    }
+
     // If we get here, sign in was successful
     return { 
       success: true,
@@ -164,17 +184,51 @@ export const SignUpWithCredentials = async (
     // Hash password
     const hashedPassword = await bcrypt.hash(validated.password, 12);
 
-    // Create user in transaction
+    // Create user with usage stats in transaction
     const user = await prisma.$transaction(async (tx) => {
-      return await tx.user.create({
+      // Create user
+      const newUser = await tx.user.create({
         data: {
           email: validated.email,
           name: validated.name,
           password: hashedPassword,
           role: "USER",
-          emailVerified: new Date(), // Set to current date for immediate access
+          plan: "FREE",
+          emailVerified: new Date(),
+          isEmailVerified: true,
+          lastLoginAt: new Date(),
         },
       });
+
+      // Create usage stats for new user
+      await tx.usageStats.create({
+        data: {
+          userId: newUser.id,
+          resumesCreated: 0,
+          resumesLimit: 1, // FREE plan: 1 resume
+          aiCreditsUsed: 0,
+          aiCreditsLimit: 10, // FREE plan: 10 AI credits per month
+          premiumTemplatesUsed: false,
+          totalViews: 0,
+          totalDownloads: 0,
+        }
+      });
+
+      // Log analytics event
+      await tx.analytics.create({
+        data: {
+          eventType: "user_registered",
+          userId: newUser.id,
+          metadata: {
+            provider: "credentials",
+            plan: "FREE",
+          }
+        }
+      }).catch(() => {
+        // Silently fail if analytics doesn't work
+      });
+
+      return newUser;
     });
 
     // Send welcome email (don't await to avoid blocking)
@@ -296,6 +350,79 @@ export const checkEmailExists = async (email: string): Promise<boolean> => {
       select: { id: true },
     });
     return !!user;
+  } catch {
+    return false;
+  }
+};
+
+// -------------------------
+// Utility: Get user usage stats
+// -------------------------
+export const getUserUsageStats = async (userId: string) => {
+  try {
+    const stats = await prisma.usageStats.findUnique({
+      where: { userId },
+      select: {
+        resumesCreated: true,
+        resumesLimit: true,
+        aiCreditsUsed: true,
+        aiCreditsLimit: true,
+        premiumTemplatesUsed: true,
+        totalViews: true,
+        totalDownloads: true,
+      }
+    });
+
+    return stats;
+  } catch (error) {
+    console.error("Error fetching usage stats:", error);
+    return null;
+  }
+};
+
+// -------------------------
+// Utility: Check if user can create resume
+// -------------------------
+export const canCreateResume = async (userId: string): Promise<boolean> => {
+  try {
+    const stats = await prisma.usageStats.findUnique({
+      where: { userId },
+      select: {
+        resumesCreated: true,
+        resumesLimit: true,
+      }
+    });
+
+    if (!stats) return false;
+
+    // -1 means unlimited (PRO plan)
+    if (stats.resumesLimit === -1) return true;
+
+    return stats.resumesCreated < stats.resumesLimit;
+  } catch {
+    return false;
+  }
+};
+
+// -------------------------
+// Utility: Check if user has AI credits
+// -------------------------
+export const hasAICredits = async (userId: string): Promise<boolean> => {
+  try {
+    const stats = await prisma.usageStats.findUnique({
+      where: { userId },
+      select: {
+        aiCreditsUsed: true,
+        aiCreditsLimit: true,
+      }
+    });
+
+    if (!stats) return false;
+
+    // -1 means unlimited (PRO plan)
+    if (stats.aiCreditsLimit === -1) return true;
+
+    return stats.aiCreditsUsed < stats.aiCreditsLimit;
   } catch {
     return false;
   }

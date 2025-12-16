@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import Image from 'next/image'
 
 interface DashboardNavProps {
   user: {
@@ -65,14 +66,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
           <div className="flex">
             {/* Logo */}
             <Link href="/dashboard" className="flex items-center">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-slate-900">
-                  ResumeAI
-                </span>
-              </div>
+              <Image src="/logo-w.png" alt="Logo" width={100} height={100} />
             </Link>
 
             {/* Desktop Navigation */}

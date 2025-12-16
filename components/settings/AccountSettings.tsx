@@ -50,32 +50,32 @@ export function AccountSettings({ user, subscription }: AccountSettingsProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6">
+    <div className="bg-white/5 border border-white/10 rounded-xl  p-6">
       <div className="flex items-center space-x-3 mb-6">
-        <Shield className="w-5 h-5 text-slate-600" />
-        <h2 className="text-xl font-semibold text-slate-900">Account Management</h2>
+        <Shield className="w-5 h-5 text-white/90" />
+        <h2 className="text-xl font-semibold text-white/90">Account Management</h2>
       </div>
 
       <div className="space-y-6">
         {/* Account Info */}
         <div className="space-y-3">
           <div className="flex justify-between py-2 border-b border-slate-100">
-            <span className="text-sm text-slate-600">User ID</span>
-            <span className="text-sm font-mono text-slate-900">{user.id}</span>
+            <span className="text-sm text-white/90">User ID</span>
+            <span className="text-sm font-mono text-white/90">{user.id}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
-            <span className="text-sm text-slate-600">Email</span>
-            <span className="text-sm text-slate-900">{user.email}</span>
+            <span className="text-sm text-white/90">Email</span>
+            <span className="text-sm text-white/90">{user.email}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
-            <span className="text-sm text-slate-600">Plan</span>
-            <span className="text-sm text-slate-900 capitalize">{user.plan.toLowerCase()}</span>
+            <span className="text-sm text-white/90">Plan</span>
+            <span className="text-sm text-white/90 capitalize">{user.plan.toLowerCase()}</span>
           </div>
           {subscription && (
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-sm text-slate-600">Subscription Status</span>
+              <span className="text-sm text-white/90">Subscription Status</span>
               <span className={`text-sm capitalize ${
-                subscription.status === 'active' ? 'text-green-600' : 'text-slate-600'
+                subscription.status === 'active' ? 'text-green-600' : 'text-white/90'
               }`}>
                 {subscription.status}
               </span>

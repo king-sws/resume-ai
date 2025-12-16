@@ -32,15 +32,15 @@ export function UsageStats({ plan, usageStats }: UsageStatsProps) {
     : new Date()
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6">
+    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <TrendingUp className="w-5 h-5 text-slate-600" />
-          <h2 className="text-xl font-semibold text-slate-900">Usage & Limits</h2>
+          <TrendingUp className="w-5 h-5 text-white/90" />
+          <h2 className="text-xl font-semibold text-white/90">Usage & Limits</h2>
         </div>
         {isFreePlan && (
           <Link href="/dashboard/upgrade">
-            <Button size="sm" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+            <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
               <Crown className="w-4 h-4 mr-2" />
               Upgrade to Pro
             </Button>
@@ -50,10 +50,10 @@ export function UsageStats({ plan, usageStats }: UsageStatsProps) {
 
       <div className="space-y-6">
         {/* Current Plan */}
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-slate-50/5 rounded-lg">
           <div>
             <p className="text-sm text-slate-600">Current Plan</p>
-            <p className="text-lg font-semibold text-slate-900 capitalize">
+            <p className="text-lg font-semibold text-white/90 capitalize">
               {plan.toLowerCase()} Plan
             </p>
           </div>
@@ -71,7 +71,7 @@ export function UsageStats({ plan, usageStats }: UsageStatsProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-slate-700">Resumes Created</span>
+              <span className="text-sm font-medium text-white/90">Resumes Created</span>
             </div>
             <span className="text-sm text-slate-600">
               {resumesLimit === -1 ? (
@@ -102,7 +102,7 @@ export function UsageStats({ plan, usageStats }: UsageStatsProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-slate-700">AI Credits Used</span>
+              <span className="text-sm font-medium text-white/90">AI Credits Used</span>
             </div>
             <span className="text-sm text-slate-600">
               {aiCreditsUsed} / {aiCreditsLimit}
@@ -128,9 +128,9 @@ export function UsageStats({ plan, usageStats }: UsageStatsProps) {
 
         {/* Pro Plan Benefits */}
         {isFreePlan && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
-            <h3 className="font-semibold text-slate-900 mb-2">Upgrade to Pro for:</h3>
-            <ul className="space-y-1 text-sm text-slate-700">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <h3 className="font-semibold text-white/90 mb-2">Upgrade to Pro for:</h3>
+            <ul className="space-y-1 text-sm text-white/90">
               <li className="flex items-center space-x-2">
                 <span className="text-green-600">✓</span>
                 <span>Unlimited resumes</span>

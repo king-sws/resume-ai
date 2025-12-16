@@ -62,31 +62,31 @@ export function ResumePreview({ data, templateStructure }: ResumePreviewProps) {
               <div className="space-y-2 text-xs">
                 {data.personalInfo.email && (
                   <div className="flex items-start space-x-2">
-                    <Mail className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <Mail className="w-3 h-3 mt-0.5 shrink-0" />
                     <span className="break-all">{data.personalInfo.email}</span>
                   </div>
                 )}
                 {data.personalInfo.phone && (
                   <div className="flex items-start space-x-2">
-                    <Phone className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <Phone className="w-3 h-3 mt-0.5 shrink-0" />
                     <span>{data.personalInfo.phone}</span>
                   </div>
                 )}
                 {data.personalInfo.location && (
                   <div className="flex items-start space-x-2">
-                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
                     <span>{data.personalInfo.location}</span>
                   </div>
                 )}
                 {data.personalInfo.linkedin && (
                   <div className="flex items-start space-x-2">
-                    <Linkedin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <Linkedin className="w-3 h-3 mt-0.5 shrink-0" />
                     <span className="break-all">{data.personalInfo.linkedin}</span>
                   </div>
                 )}
                 {data.personalInfo.website && (
                   <div className="flex items-start space-x-2">
-                    <Globe className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <Globe className="w-3 h-3 mt-0.5 shrink-0" />
                     <span className="break-all">{data.personalInfo.website}</span>
                   </div>
                 )}
@@ -154,11 +154,11 @@ export function ResumePreview({ data, templateStructure }: ResumePreviewProps) {
             <div className="mb-6">
               <h1 
                 className="font-bold mb-1"
-                style={{ 
-                  fontSize: `${fonts.sizes.name}px`,
-                  fontFamily: fonts.heading,
-                  color: colors.primary
-                }}
+                // style={{ 
+                //   fontSize: `${fonts.sizes.name}px`,
+                //   fontFamily: fonts.heading,
+                //   color: colors.primary
+                // }}
               >
                 {data.personalInfo.fullName || 'Your Name'}
               </h1>

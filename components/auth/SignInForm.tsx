@@ -63,24 +63,24 @@ export function SignInForm() {
       {/* Divider */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200" />
+          <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-slate-500">Or continue with email</span>
+          <span className="bg-[#0a0a0a] px-2 text-gray-500">Or continue with email</span>
         </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {error && (
-          <Alert variant="destructive" className="text-sm">
+          <Alert variant="destructive" className="text-sm bg-red-500/10 border-red-500/20 text-red-400">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {/* Email Field */}
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+          <Label htmlFor="email" className="text-sm font-medium text-gray-300">
             Email address
           </Label>
           <div className="relative">
@@ -89,25 +89,25 @@ export function SignInForm() {
               id="email"
               type="email"
               placeholder="you@company.com"
-              className="pl-10 h-11"
+              className="pl-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20"
               disabled={isLoading}
             />
-            <Mail className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+            <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-500" />
           </div>
           {errors.email && (
-            <p className="text-xs text-red-600">{errors.email.message}</p>
+            <p className="text-xs text-red-400">{errors.email.message}</p>
           )}
         </div>
 
         {/* Password Field */}
         <div className="space-y-2">
           <div className="flex justify-between">
-            <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+            <Label htmlFor="password" className="text-sm font-medium text-gray-300">
               Password
             </Label>
             <Link
               href="/auth/forgot-password"
-              className="text-xs text-blue-600 hover:text-blue-500"
+              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
             >
               Forgot password?
             </Link>
@@ -118,14 +118,14 @@ export function SignInForm() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
-              className="pl-10 pr-10 h-11"
+              className="pl-10 pr-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20"
               disabled={isLoading}
             />
-            <Lock className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+            <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500" />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-3 text-gray-500 hover:text-gray-300 transition-colors"
               disabled={isLoading}
             >
               {showPassword ? (
@@ -136,14 +136,14 @@ export function SignInForm() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-xs text-red-600">{errors.password.message}</p>
+            <p className="text-xs text-red-400">{errors.password.message}</p>
           )}
         </div>
 
         {/* Submit Button */}
         <Button
           type="submit"
-          className="w-full h-11 bg-slate-900 hover:bg-slate-800"
+          className="w-full h-11 bg-white text-black hover:bg-gray-200 font-medium transition-colors"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -158,11 +158,11 @@ export function SignInForm() {
       </form>
 
       {/* Sign up link */}
-      <div className="text-center text-sm text-slate-600">
+      <div className="text-center text-sm text-gray-400">
         Don&#39;t have an account?{' '}
         <Link
           href="/auth/sign-up"
-          className="font-medium text-blue-600 hover:text-blue-500"
+          className="font-medium text-blue-400 hover:text-blue-300 transition-colors"
         >
           Sign up for free
         </Link>

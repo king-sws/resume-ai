@@ -218,7 +218,7 @@ export function ResumeEditor({
           )}
         </div>
 
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex items-center text-black space-x-2 w-full sm:w-auto">
           <QuickPDFGenerator 
             resumeId={resumeId}
             title={resumeData.title}
@@ -230,7 +230,7 @@ export function ResumeEditor({
             variant="outline"
             onClick={() => handleUpdate('DRAFT')}
             disabled={isSaving}
-            className="flex-1 sm:flex-none bg-[#2a2b2b] border-[#2a2b2b] text-white hover:bg-[#3a3b3b] transition-all"
+            className="flex-1 sm:flex-none bg-[#2a2b2b] border-[#2a2b2b] text-white  hover:bg-[#3a3b3b] transition-all"
           >
             {isSaving && savingType === 'draft' ? (
               <>
