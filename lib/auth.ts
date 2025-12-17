@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // auth.ts
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
@@ -7,7 +8,7 @@ import prisma from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { UserRole } from "./generated/prisma/enums"
+import { UserPlan, UserRole } from "./generated/prisma/enums"
 import type { Adapter } from "next-auth/adapters"
 
 // Validation schema for credentials
@@ -185,7 +186,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as UserRole
-        session.user.plan = token.plan as string
+        session.user.plan = token.plan as UserPlan
         session.user.email = token.email!
         session.user.name = token.name as string | null
         session.user.image = token.picture as string | null
