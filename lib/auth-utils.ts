@@ -66,12 +66,3 @@ export async function getCurrentUser() {
 /**
  * Check if email is verified
  */
-export async function requireEmailVerified() {
-  const session = await getServerSession()
-  
-  if (!session.user.isEmailVerified) {
-    redirect("/auth/verify-email")
-  }
-  
-  return session
-}
