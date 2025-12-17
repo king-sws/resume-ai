@@ -1,7 +1,7 @@
 // app/admin/templates/new/page.tsx
+import { TemplateFormPage } from '@/components/admin/TemplateFormPage'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { TemplateForm } from '@/components/admin/TemplateForm'
 
 export default async function NewTemplatePage() {
   const session = await auth()
@@ -19,7 +19,7 @@ export default async function NewTemplatePage() {
       </div>
 
       {/* Form */}
-      <TemplateForm />
+      <TemplateFormPage />
     </div>
   )
 }

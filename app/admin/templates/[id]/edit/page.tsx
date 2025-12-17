@@ -2,7 +2,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import prisma from '@/lib/db'
-import { TemplateForm } from '@/components/admin/TemplateForm'
+import { TemplateFormPage } from '@/components/admin/TemplateFormPage'
 
 interface PageProps {
   params: Promise<{
@@ -12,13 +12,14 @@ interface PageProps {
 
 export default async function EditTemplatePage({ params }: PageProps) {
   const session = await auth()
-
+  
   if (!session?.user?.id) {
     redirect('/auth/sign-in')
   }
 
   const { id } = await params
 
+  // Check if template exists
   const template = await prisma.template.findUnique({
     where: { id },
   })
@@ -36,7 +37,7 @@ export default async function EditTemplatePage({ params }: PageProps) {
       </div>
 
       {/* Form */}
-      <TemplateForm initialData={template} templateId={template.id} />
+      <TemplateFormPage templateId={id} />
     </div>
   )
 }
