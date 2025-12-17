@@ -1,36 +1,88 @@
 // components/admin/TemplateForm.tsx
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, Save, Loader2, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
 import Image from 'next/image'
 
-interface TemplateFormProps {
-  initialData?: any
-  templateId?: string
+interface Template {
+  id: string
+  name: string
+  description: string | null
+  category: string
+  thumbnail: string | null
+  previewUrl: string | null
+  isPremium: boolean
+  isActive: boolean
+  usageCount: number
+  structure: any
+  createdAt: Date
+  updatedAt: Date
 }
 
-export function TemplateForm({ initialData, templateId }: TemplateFormProps) {
-  const router = useRouter()
+interface TemplateFormProps {
+  templateId?: string | null
+  onClose: () => void
+  onSuccess: (template: Template) => void
+}
+
+export function TemplateForm({ templateId, onClose, onSuccess }: TemplateFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [loading, setLoading] = useState(false)
+  const [loadingTemplate, setLoadingTemplate] = useState(!!templateId)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.thumbnail || null)
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(initialData?.thumbnail || null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    description: initialData?.description || '',
-    category: initialData?.category || 'MODERN',
-    isPremium: initialData?.isPremium || false,
-    isActive: initialData?.isActive ?? true,
-    previewUrl: initialData?.previewUrl || '',
+    name: '',
+    description: '',
+    category: 'MODERN',
+    isPremium: false,
+    isActive: true,
+    previewUrl: '',
   })
+
+  // Fetch template data if editing
+  useEffect(() => {
+    if (templateId) {
+      fetchTemplate()
+    }
+  }, [templateId])
+
+  const fetchTemplate = async () => {
+    if (!templateId) return
+
+    try {
+      setLoadingTemplate(true)
+      const response = await fetch(`/api/admin/templates/${templateId}`)
+      
+      if (!response.ok) throw new Error('Failed to fetch template')
+
+      const { template } = await response.json()
+      
+      setFormData({
+        name: template.name || '',
+        description: template.description || '',
+        category: template.category || 'MODERN',
+        isPremium: template.isPremium || false,
+        isActive: template.isActive ?? true,
+        previewUrl: template.previewUrl || '',
+      })
+      
+      if (template.thumbnail) {
+        setImagePreview(template.thumbnail)
+        setUploadedImageUrl(template.thumbnail)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load template')
+    } finally {
+      setLoadingTemplate(false)
+    }
+  }
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -146,8 +198,8 @@ export function TemplateForm({ initialData, templateId }: TemplateFormProps) {
         throw new Error(data.error || 'Failed to save template')
       }
 
-      router.push('/admin/templates')
-      router.refresh()
+      const { template } = await response.json()
+      onSuccess(template)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save template')
     } finally {
@@ -155,246 +207,277 @@ export function TemplateForm({ initialData, templateId }: TemplateFormProps) {
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Basic Info */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-white">Basic Information</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Template Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
-              placeholder="Modern Professional"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Category *
-            </label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              required
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
-            >
-              <option value="MODERN">Modern</option>
-              <option value="CLASSIC">Classic</option>
-              <option value="CREATIVE">Creative</option>
-              <option value="MINIMALIST">Minimalist</option>
-              <option value="PROFESSIONAL">Professional</option>
-              <option value="TECHNICAL">Technical</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-white mb-2">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8] resize-none"
-              placeholder="A modern, professional template perfect for..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Preview URL (Optional)
-            </label>
-            <input
-              type="url"
-              value={formData.previewUrl}
-              onChange={(e) => setFormData({ ...formData, previewUrl: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
-              placeholder="https://..."
-            />
+  if (loadingTemplate) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="bg-[#1a1b1b] rounded-xl p-8 max-w-4xl w-full mx-4">
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-[#50a3f8]" />
+            <span className="text-white">Loading template...</span>
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Template Image Upload */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Template Thumbnail *</h2>
-          {uploadingImage && (
-            <span className="text-sm text-[#50a3f8] flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Uploading...
-            </span>
-          )}
-        </div>
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="min-h-screen px-4 py-8 flex items-center justify-center">
+        <div className="bg-[#1a1b1b] rounded-xl p-8 max-w-4xl w-full">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-6">
+              <h2 className="text-2xl font-bold text-white">
+                {templateId ? 'Edit Template' : 'Create New Template'}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
 
-        <div className="space-y-4">
-          {/* Upload Area */}
-          <div
-            onClick={() => !uploadingImage && fileInputRef.current?.click()}
-            className={`relative border-2 border-dashed rounded-xl p-8 transition-colors ${
-              uploadingImage 
-                ? 'border-white/10 cursor-wait' 
-                : 'border-white/20 hover:border-[#50a3f8] cursor-pointer'
-            } group`}
-          >
-            {imagePreview ? (
-              <div className="relative">
-                <div className="relative w-full max-w-md mx-auto aspect-[3/4] rounded-lg overflow-hidden bg-gray-900">
-                  <Image
-                    src={imagePreview}
-                    alt="Preview"
-                    fill
-                    className="object-contain"
+            {/* Basic Info */}
+            <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-white">Basic Information</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Template Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
+                    placeholder="Modern Professional"
                   />
                 </div>
-                {!uploadingImage && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemoveImage()
-                    }}
-                    className="absolute top-2 right-2 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg z-10"
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
                   >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-                {uploadedImageUrl && (
-                  <div className="mt-4 p-3 rounded-lg bg-[#10b981]/10 border border-[#10b981]/20">
-                    <p className="text-sm text-[#10b981] font-medium flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Image uploaded successfully!
-                    </p>
-                  </div>
+                    <option value="MODERN">Modern</option>
+                    <option value="CLASSIC">Classic</option>
+                    <option value="CREATIVE">Creative</option>
+                    <option value="MINIMALIST">Minimalist</option>
+                    <option value="PROFESSIONAL">Professional</option>
+                    <option value="TECHNICAL">Technical</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8] resize-none"
+                    placeholder="A modern, professional template perfect for..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Preview URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.previewUrl}
+                    onChange={(e) => setFormData({ ...formData, previewUrl: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#50a3f8]"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Template Image Upload */}
+            <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Template Thumbnail *</h3>
+                {uploadingImage && (
+                  <span className="text-sm text-[#50a3f8] flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </span>
                 )}
               </div>
-            ) : (
-              <div className="text-center">
-                <div className="inline-flex p-4 rounded-full bg-white/5 mb-4 group-hover:bg-[#50a3f8]/10 transition-colors">
-                  <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#50a3f8]" />
+
+              <div className="space-y-4">
+                {/* Upload Area */}
+                <div
+                  onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-xl p-8 transition-colors ${
+                    uploadingImage 
+                      ? 'border-white/10 cursor-wait' 
+                      : 'border-white/20 hover:border-[#50a3f8] cursor-pointer'
+                  } group`}
+                >
+                  {imagePreview ? (
+                    <div className="relative">
+                      <div className="relative w-full max-w-md mx-auto aspect-[3/4] rounded-lg overflow-hidden bg-gray-900">
+                        <Image
+                          src={imagePreview}
+                          alt="Preview"
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      {!uploadingImage && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveImage()
+                          }}
+                          className="absolute top-2 right-2 p-2 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg z-10"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                      {uploadedImageUrl && (
+                        <div className="mt-4 p-3 rounded-lg bg-[#10b981]/10 border border-[#10b981]/20">
+                          <p className="text-sm text-[#10b981] font-medium flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Image uploaded successfully!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="inline-flex p-4 rounded-full bg-white/5 mb-4 group-hover:bg-[#50a3f8]/10 transition-colors">
+                        <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#50a3f8]" />
+                      </div>
+                      <p className="text-white font-medium mb-2">
+                        Click to upload template thumbnail
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        PNG, JPG or WebP (max 5MB)
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Recommended: 800x1200px (3:4 ratio)
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-white font-medium mb-2">
-                  Click to upload template thumbnail
-                </p>
-                <p className="text-sm text-gray-400">
-                  PNG, JPG or WebP (max 5MB)
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Recommended: 800x1200px (3:4 ratio)
-                </p>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleImageSelect}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+
+                {/* Guidelines */}
+                <div className="p-4 rounded-lg bg-[#50a3f8]/10 border border-[#50a3f8]/20">
+                  <div className="flex gap-3">
+                    <ImageIcon className="w-5 h-5 text-[#50a3f8] shrink-0 mt-0.5" />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-white">Image Guidelines:</p>
+                      <ul className="text-sm text-gray-400 space-y-1">
+                        <li>• High-quality screenshot of the resume template</li>
+                        <li>• Aspect ratio: 3:4 (portrait orientation)</li>
+                        <li>• Show complete resume layout with sample content</li>
+                        <li>• Ensure text is clearly readable</li>
+                        <li>• Professional sample data recommended</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-white">Settings</h3>
+
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isPremium}
+                    onChange={(e) => setFormData({ ...formData, isPremium: e.target.checked })}
+                    className="w-5 h-5 rounded bg-white/5 border-white/10 text-[#50a3f8] focus:ring-2 focus:ring-[#50a3f8]"
+                  />
+                  <div>
+                    <span className="text-white font-medium">Premium Template</span>
+                    <p className="text-sm text-gray-400">Only available to Pro users</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="w-5 h-5 rounded bg-white/5 border-white/10 text-[#50a3f8] focus:ring-2 focus:ring-[#50a3f8]"
+                  />
+                  <div>
+                    <span className="text-white font-medium">Active</span>
+                    <p className="text-sm text-gray-400">Template visible to users</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
-          </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
-            onChange={handleImageSelect}
-            disabled={uploadingImage}
-            className="hidden"
-          />
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="border-white/10 text-gray-400 hover:bg-white/5"
+              >
+                Cancel
+              </Button>
 
-          {/* Guidelines */}
-          <div className="p-4 rounded-lg bg-[#50a3f8]/10 border border-[#50a3f8]/20">
-            <div className="flex gap-3">
-              <ImageIcon className="w-5 h-5 text-[#50a3f8] shrink-0 mt-0.5" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-white">Image Guidelines:</p>
-                <ul className="text-sm text-gray-400 space-y-1">
-                  <li>• High-quality screenshot of the resume template</li>
-                  <li>• Aspect ratio: 3:4 (portrait orientation)</li>
-                  <li>• Show complete resume layout with sample content</li>
-                  <li>• Ensure text is clearly readable</li>
-                  <li>• Professional sample data recommended</li>
-                </ul>
-              </div>
+              <Button
+                type="submit"
+                disabled={loading || uploadingImage || !uploadedImageUrl}
+                className="bg-gradient-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {templateId ? 'Update' : 'Create'} Template
+                  </>
+                )}
+              </Button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
-
-      {/* Settings */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-6">
-        <h2 className="text-xl font-semibold text-white">Settings</h2>
-
-        <div className="space-y-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.isPremium}
-              onChange={(e) => setFormData({ ...formData, isPremium: e.target.checked })}
-              className="w-5 h-5 rounded bg-white/5 border-white/10 text-[#50a3f8] focus:ring-2 focus:ring-[#50a3f8]"
-            />
-            <div>
-              <span className="text-white font-medium">Premium Template</span>
-              <p className="text-sm text-gray-400">Only available to Pro users</p>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-5 h-5 rounded bg-white/5 border-white/10 text-[#50a3f8] focus:ring-2 focus:ring-[#50a3f8]"
-            />
-            <div>
-              <span className="text-white font-medium">Active</span>
-              <p className="text-sm text-gray-400">Template visible to users</p>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <Link href="/admin/templates">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/10 text-gray-400 hover:bg-white/5"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Cancel
-          </Button>
-        </Link>
-
-        <Button
-          type="submit"
-          disabled={loading || uploadingImage || !uploadedImageUrl}
-          className="bg-gradient-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              {templateId ? 'Update' : 'Create'} Template
-            </>
-          )}
-        </Button>
-      </div>
-    </form>
+    </div>
   )
 }

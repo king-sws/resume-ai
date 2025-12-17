@@ -44,17 +44,17 @@ export function AdminTemplateManager({ initialTemplates }: AdminTemplateManagerP
   const router = useRouter()
   const [templates, setTemplates] = useState<Template[]>(initialTemplates)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null)
 
   const handleCreate = () => {
-    setEditingTemplate(null)
+    setEditingTemplateId(null)
     setIsFormOpen(true)
   }
 
   const handleEdit = (template: Template) => {
-    setEditingTemplate(template)
+    setEditingTemplateId(template.id)
     setIsFormOpen(true)
   }
 
@@ -100,7 +100,7 @@ export function AdminTemplateManager({ initialTemplates }: AdminTemplateManagerP
   }
 
   const handleFormSuccess = (template: Template) => {
-    if (editingTemplate) {
+    if (editingTemplateId) {
       setTemplates(templates.map(t => t.id === template.id ? template : t))
       toast.success('Template updated successfully')
     } else {
@@ -108,7 +108,7 @@ export function AdminTemplateManager({ initialTemplates }: AdminTemplateManagerP
       toast.success('Template created successfully')
     }
     setIsFormOpen(false)
-    setEditingTemplate(null)
+    setEditingTemplateId(null)
     router.refresh()
   }
 
@@ -239,10 +239,10 @@ export function AdminTemplateManager({ initialTemplates }: AdminTemplateManagerP
       {/* Template Form Modal */}
       {isFormOpen && (
         <TemplateForm
-          template={editingTemplate}
+          templateId={editingTemplateId}
           onClose={() => {
             setIsFormOpen(false)
-            setEditingTemplate(null)
+            setEditingTemplateId(null)
           }}
           onSuccess={handleFormSuccess}
         />
