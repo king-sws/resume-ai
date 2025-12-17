@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// auth.ts
+// lib/auth.ts
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
@@ -10,6 +10,7 @@ import { z } from "zod"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { UserPlan, UserRole } from "./generated/prisma/enums"
 import type { Adapter } from "next-auth/adapters"
+import { Prisma } from "./generated/prisma/client"
 
 // Validation schema for credentials
 const loginSchema = z.object({
@@ -296,31 +297,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: async ({ user, account, isNewUser }) => {
       console.log(`✅ User ${user.email} signed in with ${account?.provider}`)
       
-      if (isNewUser) {
+      if (isNewUser && user.id) {
         console.log(`🎉 New user registered: ${user.email}`)
         
         // Log analytics event for new user
         await prisma.analytics.create({
           data: {
             eventType: "user_registered",
-            userId: user.id!,
+            userId: user.id,
             metadata: {
               provider: account?.provider,
               email: user.email,
-            }
+            } as Prisma.InputJsonValue
           }
         }).catch(() => {
           // Silently fail if analytics doesn't work
         })
-      } else {
+      } else if (user.id) {
         // Log analytics event for returning user
         await prisma.analytics.create({
           data: {
             eventType: "user_login",
-            userId: user.id!,
+            userId: user.id,
             metadata: {
               provider: account?.provider,
-            }
+            } as Prisma.InputJsonValue
           }
         }).catch(() => {
           // Silently fail if analytics doesn't work
@@ -387,5 +388,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 
-  // Ensure errors don't crash the app
 })
