@@ -1,8 +1,11 @@
+// ========================================
 // app/api/resume/duplicate/route.ts
+// ========================================
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/lib/generated/prisma/client'
 
 const duplicateSchema = z.object({
   resumeId: z.string().cuid(),
@@ -58,13 +61,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create duplicate
+    // Create duplicate - cast data to InputJsonValue
     const duplicate = await prisma.resume.create({
       data: {
         userId: session.user.id,
         title: `${original.title} (Copy)`,
         description: original.description,
-        data: original.data,
+        data: original.data as Prisma.InputJsonValue,
         status: 'DRAFT',
         templateId: original.templateId,
       },
