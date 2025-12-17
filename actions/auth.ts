@@ -7,7 +7,6 @@ import { SendWelcomeEmail } from "@/nodemailer/email";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { AuthError } from "next-auth";
 import prisma from "@/lib/db";
 
 // -------------------------
@@ -134,7 +133,7 @@ export const SignInWithCredentials = async (
       };
     }
 
-    if (error instanceof AuthError) {
+    if (error) {
       return {
         success: false,
         error: "Authentication failed. Please check your credentials.",
