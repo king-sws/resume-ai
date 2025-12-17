@@ -48,7 +48,7 @@ interface Interaction {
 
 interface BillingClientProps {
   user: User
-  subscription: Subscription
+  subscription: Subscription | null  // Changed to allow null
   usageStats: UsageStats
   recentInteractions: Interaction[]
 }
@@ -83,7 +83,7 @@ export function BillingClient({
 
   const isPro = user.plan === 'PRO' || user.plan === 'ENTERPRISE'
   const isActive = subscription?.status === 'active'
-  const willCancel = subscription?.cancelAtPeriodEnd
+  const willCancel = subscription?.cancelAtPeriodEnd ?? false
 
   const aiCreditsPercentage = (usageStats.aiCreditsUsed / usageStats.aiCreditsLimit) * 100
   const resumePercentage = usageStats.resumesLimit === -1 
@@ -109,7 +109,7 @@ export function BillingClient({
             <div className="flex items-start gap-4">
               <div className={`p-3 rounded-xl ${
                 isPro 
-                  ? 'bg-linear-to-br from-[#50a3f8] to-[#2fabb8]'
+                  ? 'bg-gradient-to-br from-[#50a3f8] to-[#2fabb8]'
                   : 'bg-[#2a2b2b]'
               }`}>
                 {isPro ? (
@@ -167,7 +167,7 @@ export function BillingClient({
                 </Button>
               ) : (
                 <Link href="/dashboard/upgrade">
-                  <Button className="bg-linear-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white">
+                  <Button className="bg-gradient-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white">
                     <Crown className="w-4 h-4 mr-2" />
                     Upgrade Plan
                   </Button>
@@ -218,8 +218,8 @@ export function BillingClient({
               <div
                 className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
                   aiCreditsPercentage >= 80
-                    ? 'bg-linear-to-r from-[#ef4444] to-[#dc2626]'
-                    : 'bg-linear-to-r from-[#f59e0b] to-[#d97706]'
+                    ? 'bg-gradient-to-r from-[#ef4444] to-[#dc2626]'
+                    : 'bg-gradient-to-r from-[#f59e0b] to-[#d97706]'
                 }`}
                 style={{ width: `${Math.min(aiCreditsPercentage, 100)}%` }}
               />
@@ -254,7 +254,7 @@ export function BillingClient({
             {usageStats.resumesLimit !== -1 && (
               <div className="relative h-2 bg-[#2a2b2b] rounded-full overflow-hidden mb-4">
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-linear-to-r from-[#50a3f8] to-[#2fabb8] transition-all duration-500"
+                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#50a3f8] to-[#2fabb8] transition-all duration-500"
                   style={{ width: `${Math.min(resumePercentage, 100)}%` }}
                 />
               </div>
@@ -346,9 +346,9 @@ export function BillingClient({
 
         {/* Upgrade CTA for Free Users */}
         {!isPro && (
-          <div className="p-8 rounded-xl border border-[#50a3f8]/30 bg-linear-to-br from-[#50a3f8]/5 to-[#2fabb8]/5">
+          <div className="p-8 rounded-xl border border-[#50a3f8]/30 bg-gradient-to-br from-[#50a3f8]/5 to-[#2fabb8]/5">
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-xl bg-linear-to-br from-[#50a3f8] to-[#2fabb8]">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-[#50a3f8] to-[#2fabb8]">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
@@ -359,7 +359,7 @@ export function BillingClient({
                   Upgrade to Pro for unlimited resumes, 100 AI credits/month, premium templates, and more!
                 </p>
                 <Link href="/dashboard/upgrade">
-                  <Button className="bg-linear-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white">
+                  <Button className="bg-gradient-to-r from-[#50a3f8] to-[#2fabb8] hover:opacity-90 text-white">
                     <Crown className="w-4 h-4 mr-2" />
                     View Pricing Plans
                     <ExternalLink className="w-4 h-4 ml-2" />
