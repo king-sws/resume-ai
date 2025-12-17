@@ -18,7 +18,8 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 })
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+// Configure NextAuth - IMPORTANT: Must be the default export
+export const {handlers, auth, signIn, signOut} = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   
   // Session strategy
@@ -118,7 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt: async ({ token, user, account, trigger }) => {
       // Initial sign in - get data from user object
       if (user) {
-        token.id = user.id
+        token.id = user.id as string
         token.role = (user as any).role
         token.name = user.name
         token.email = user.email
@@ -387,5 +388,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
   },
-
 })
+
+// Default export for the auth function
+export default auth
