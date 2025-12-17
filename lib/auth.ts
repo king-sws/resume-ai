@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { UserRole } from "./generated/prisma/enums"
+import type { Adapter } from "next-auth/adapters"
 
 // Validation schema for credentials
 const loginSchema = z.object({
@@ -16,7 +17,7 @@ const loginSchema = z.object({
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as Adapter,
   
   // Session strategy
   session: {
@@ -116,7 +117,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Initial sign in - get data from user object
       if (user) {
         token.id = user.id
-        token.role = user.role
+        token.role = (user as any).role
         token.name = user.name
         token.email = user.email
         token.picture = user.image
@@ -301,7 +302,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await prisma.analytics.create({
           data: {
             eventType: "user_registered",
-            userId: user.id,
+            userId: user.id!,
             metadata: {
               provider: account?.provider,
               email: user.email,
@@ -315,7 +316,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await prisma.analytics.create({
           data: {
             eventType: "user_login",
-            userId: user.id,
+            userId: user.id!,
             metadata: {
               provider: account?.provider,
             }
@@ -386,5 +387,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 
   // Ensure errors don't crash the app
-  trustHost: true,
 })
